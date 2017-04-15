@@ -67,8 +67,8 @@ preferences {
 	section("Camera Info"){
     	input "camIP", "text", title: "Camera IP", description: "Camera IP", required: true
         input "camPort", "text", title: "Camera Port", description: "Camera Port", required: true
-        input "camUser", "text", title: "Camera Username", description: "Camera Username", required: true
-        input "camPass", "text", title: "Camera Password", description: "Camera Password", required: true
+        input "camUser", "text", title: "Camera Username", description: "Camera Username", required: false
+        input "camPass", "text", title: "Camera Password", description: "Camera Password", required: false
 	}
 }
 
@@ -95,7 +95,10 @@ def parse(String description) {
 
 // handle commands
 def configure() {
-	state.streamURL = "http://$camUser:$camPass@$camIP:$camPort/h264.flv"
+	if("$camUser" == null || "$camPass" == null)
+    	state.streamURL = "http://$camIP:$camPort/h264.flv"
+	else
+		state.streamURL = "http://$camUser:$camPass@$camIP:$camPort/h264.flv"
 	log.debug "Executing 'configure'"
     sendEvent(name:"switch", value: "on")
 }
