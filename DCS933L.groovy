@@ -65,11 +65,15 @@ metadata {
 
 preferences {
 	section("Camera Info"){
-    	input "camIP", "text", title: "Camera IP", description: "Camera IP", required: true
-        input "camPort", "text", title: "Camera Port", description: "Camera Port", required: true
-        input "camUser", "text", title: "Camera Username", description: "Camera Username", required: false
-        input "camPass", "text", title: "Camera Password", description: "Camera Password", required: false
+    	input("camIP", "text", title: "Camera IP", description: "Camera IP", required: true)
+        input("camPort", "text", title: "Camera Port", description: "Camera Port", required: true)
+        input("camUser", "text", title: "Camera Username", description: "Camera Username", required: false)
+        input("camPass", "text", title: "Camera Password", description: "Camera Password", required: false)
 	}
+    
+    section("Stream settings"){
+    	input("streamType", "enum", title: "Stream type", description: "What would you like to stream from the camera?", required: true, options: ["Audio / Video","Video Only","Audio Only"])
+    }
 }
 
 mappings {
@@ -95,11 +99,24 @@ def parse(String description) {
 
 // handle commands
 def configure() {
+	def stream = "h264.flv"
+	switch("$streamType"){
+    	case "Audio / Video":
+        	stream = "h264.flv"
+            break
+		case "Audio Only":
+        	stream = "audio.cgi"
+            break
+		case "Video Only":
+        	stream = "mjpeg.cgi?channel=1.mjpeg"
+            break
+    }
 	if("$camUser" == null || "$camPass" == null)
-    	state.streamURL = "http://$camIP:$camPort/h264.flv"
+    	state.streamURL = "http://$camIP:$camPort/" + stream
 	else
-		state.streamURL = "http://$camUser:$camPass@$camIP:$camPort/h264.flv"
+		state.streamURL = "http://$camUser:$camPass@$camIP:$camPort/" + stream
 	log.debug "Executing 'configure'"
+    log.debug "Stream: " + state.streamURL
     sendEvent(name:"switch", value: "on")
 }
 
