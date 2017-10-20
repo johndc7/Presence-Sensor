@@ -32,7 +32,6 @@ metadata {
 				"http://cdn.device-gse.smartthings.com/Arrival/Arrival2.jpg"
 				])
 			input("id", "text", title: "Device ID", description: "Device ID from app", required: true)
-            input("url", "text", title: "Server URL", description: "Server URL", required: true)
             input("timeout", "text", title: "Timeout", description: "Timeout", required: true)
 		}
 	}
@@ -82,8 +81,8 @@ def updateState(response, data){
     	}
 }
 def checkPresence(){
-	log.debug "Checking presence for $id at $url?id=$id"
-	asynchttp_v1.get(updateState, [uri:"$url?id=$id"])
+	log.debug "Checking presence"
+	asynchttp_v1.get(updateState, [uri:"https://st.callahtech.com/presence?id=$id"])
 }
 
 def setPresence(boolean present){
