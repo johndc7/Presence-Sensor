@@ -33,7 +33,7 @@ metadata {
 				"http://cdn.device-gse.smartthings.com/Arrival/Arrival2.jpg"
 				])
 			input("id", "text", title: "Device ID", description: "Device ID from app", displayDuringSetup: true, required: true)
-            input("timeout", "number", title: "Timeout", description: "Timeout", defaultValue: 0, required: true)
+            input("timeout", "number", title: "Presence timeout (minutes)", description: "Minutes until considered not present after leaving", defaultValue: 0, required: true)
 		}
 	}
 
@@ -43,7 +43,7 @@ metadata {
             state "not present", labelIcon:"st.presence.tile.not-present", backgroundColor:"#ffffff"
         }
         main "presence"
-        details(["presence", "beep", "battery"])
+        details(["presence"])
     }
 }
 
