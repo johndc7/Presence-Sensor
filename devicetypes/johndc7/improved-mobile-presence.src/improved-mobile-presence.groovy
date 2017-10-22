@@ -18,6 +18,7 @@ include 'asynchttp_v1'
 metadata {
 	definition (name: "Improved Mobile Presence", namespace: "johndc7", author: "John Callahan") {
 		capability "Presence Sensor"
+        capability "Sensor"
 	}
 
 
