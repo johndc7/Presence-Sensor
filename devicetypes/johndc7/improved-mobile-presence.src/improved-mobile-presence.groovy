@@ -31,8 +31,8 @@ metadata {
 				"http://cdn.device-gse.smartthings.com/Arrival/Arrival1.jpg",
 				"http://cdn.device-gse.smartthings.com/Arrival/Arrival2.jpg"
 				])
-			input("id", "text", title: "Device ID", description: "Device ID from app", required: true)
-            input("timeout", "text", title: "Timeout", description: "Timeout", required: true)
+			input("id", "text", title: "Device ID", description: "Device ID from app", displayDuringSetup: true, required: true)
+            input("timeout", "number", title: "Timeout", description: "Timeout", defaultValue: 0, required: true)
 		}
 	}
 
@@ -95,7 +95,7 @@ def setPresence(boolean present){
     if(present != (device.currentValue("presence") == "present")){
 		if(present)
 	   		sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "present", descriptionText: "$device.displayName has arrived")
-		else if(state.leftCounter > Integer.parseInt("$timeout"))
+		else if(state.leftCounter > timeout)
 	    	sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "not present", descriptionText: "$device.displayName has left")
 		log.debug "Presence set"
 	}
