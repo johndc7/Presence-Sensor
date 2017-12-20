@@ -14,16 +14,25 @@
  *
  */
 include 'asynchttp_v1'
+import groovy.json.JsonSlurper
  
 metadata {
 	definition (name: "Improved Mobile Presence", namespace: "johndc7", author: "John Callahan") {
 		capability "Presence Sensor"
         capability "Sensor"
+        
+        attribute "currentLocation", "String"
+        attribute "previousLocation", "String"
 	}
 
 
 	simulator {
-		// TODO: define status and reply messages here
+    	standardTile("presence", "device.presence", width: 2, height: 2, canChangeBackground: true) {
+            state "present", labelIcon:"st.presence.tile.present", backgroundColor:"#00a0dc"
+            state "not present", labelIcon:"st.presence.tile.not-present", backgroundColor:"#ffffff"
+        }
+		status "present":  "set-present"
+        status "not present": "set-away"
 	}
     
     preferences {
@@ -42,7 +51,11 @@ metadata {
             state "present", labelIcon:"st.presence.tile.present", backgroundColor:"#00a0dc"
             state "not present", labelIcon:"st.presence.tile.not-present", backgroundColor:"#ffffff"
         }
-        main "presence"
+        valueTile("location", "device.currentLocation", width: 2, height: 2) {
+        	state "Home", label: '${currentValue}', backgroundColor:"#00a0dc"
+            state "default", label: '${currentValue}', backgroundColor:"#ffffff"
+		}
+        main "location"
         details(["presence"])
     }
 }
@@ -50,7 +63,10 @@ metadata {
 // parse events into attributes
 def parse(String description) {
 	log.debug "Parsing '${description}'"
-	// TODO: handle 'presence' attribute
+	if(description == "set-present")
+    	setPresence(true);
+	if(description == "set-away")
+    	setPresence(false);
 }
 
 def installed() {
@@ -71,10 +87,16 @@ def configure() {
 def updateState(response, data){
 	if (response.hasError()) {
 	        log.error "Response has error: $response.errorMessage"
-	    } else {+6
+	    } else {
 	        try {
-                log.debug "Recieved \"$response.data\" from server"
-                setPresence(response.data == "true")
+            	def slurper = new JsonSlurper()
+            	log.debug "Recieved \"$response.data\" from server"
+                log.debug "Current Location: " + device.currentValue("currentLocation")
+                log.debug "Previous Location: " + device.currentValue("previousLocation")
+                //log.debug "Location: " + response.data.location.getClass()
+            	def json = slurper.parseText(response.data)
+                setPresence(json.present)
+                setPresenceLocation(json.location)
 	        } catch (e) {
 	            log.error "Error setting presence: $e"
                 setPresence(false)
@@ -83,7 +105,7 @@ def updateState(response, data){
 }
 def checkPresence(){
 	log.debug "Checking presence"
-	asynchttp_v1.get(updateState, [uri:"https://st.callahtech.com/presence?id=$id"])
+	asynchttp_v1.get(updateState, [uri:"https://st.callahtech.com/detailedpresence?id=$id"])
 }
 
 def setPresence(boolean present){
@@ -98,6 +120,16 @@ def setPresence(boolean present){
 	   		sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "present", descriptionText: "$device.displayName has arrived")
 		else if(state.leftCounter > timeout)
 	    	sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "not present", descriptionText: "$device.displayName has left")
-		log.debug "Presence set"
+        log.debug "Presence set"
 	}
+}
+
+def setPresenceLocation(String location){
+	if(location != device.currentValue("currentLocation")){
+		log.debug "Setting location to: " + location
+		sendEvent(name: "previousLocation", value: device.currentValue("currentLocation"), isStateChange: true, displayed: false)
+		sendEvent(name: "currentLocation", value: location, isStateChange: true, displayed: false)
+		log.debug "Current location: " + device.currentValue("currentLoaction")
+		log.debug "Previous location: " + device.currentValue("previousLocation")
+    }
 }
