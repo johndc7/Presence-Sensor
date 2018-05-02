@@ -49,7 +49,6 @@ def updatePresence() {
         log.error("No JSON data received. Requesting update of ${devices.size()} device(s) at location.");
     	return [error:true,type:"No Data",message:"No JSON data received. Requesting update of ${devices.size()} device(s) at location."];
 	}
-    //TODO: Fix this.....
     log.debug("Updating: " + body.id);
     for(int i = 0; i < devices.size(); i++)
     	if(devices.get(i).currentValue("deviceId") == body.id){
