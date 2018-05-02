@@ -1,7 +1,7 @@
 /**
  *  Improved Mobile Presence
  *
- *  Copyright 2017 John Callahan
+ *  Copyright 2018 John Callahan
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -21,8 +21,12 @@ metadata {
 		capability "Presence Sensor"
         capability "Sensor"
         
+        attribute "deviceId","String"
         attribute "currentLocation", "String"
         attribute "previousLocation", "String"
+        
+        command "checkPresence"
+        command "setPresence",["boolean","string"]
 	}
 
 
@@ -79,6 +83,7 @@ def updated() {
 
 // handle commands
 def configure() {
+	sendEvent(name: "deviceId", value: id, isStateChange: true, displayed: false)
 	state.leftCounter = 0
 	runEvery1Minute(checkPresence)
     checkPresence()
@@ -89,17 +94,17 @@ def updateState(response, data){
 	        log.error "Response has error: $response.errorMessage"
 	    } else {
 	        try {
-            	def slurper = new JsonSlurper()
-            	log.debug "Recieved \"$response.data\" from server"
-                log.debug "Current Location: " + device.currentValue("currentLocation")
-                log.debug "Previous Location: " + device.currentValue("previousLocation")
+            	def slurper = new JsonSlurper();
+            	def json = slurper.parseText(response.data);
+                setPresence(json.present, json.location);
+                //setPresenceLocation(json.location);
+                log.debug "Recieved \"$response.data\" from server"
+                log.debug "Current Location: " + device.currentValue("currentLocation");
+                log.debug "Previous Location: " + device.currentValue("previousLocation");
                 //log.debug "Location: " + response.data.location.getClass()
-            	def json = slurper.parseText(response.data)
-                setPresence(json.present)
-                setPresenceLocation(json.location)
 	        } catch (e) {
 	            log.error "Error setting presence: $e"
-                setPresence(false)
+                setPresence(false, "Away");
 	        }
     	}
 }
@@ -108,18 +113,22 @@ def checkPresence(){
 	asynchttp_v1.get(updateState, [uri:"https://st.callahtech.com/detailedpresence?id=$id"])
 }
 
-def setPresence(boolean present){
+def setPresence(boolean present, String location){
 	log.debug "setPresence(" + present + ")"
     log.debug "leftCounter: " + state.leftCounter
     if(present)
     	state.leftCounter = 0
 	else
     	state.leftCounter = state.leftCounter+1
-    if(present != (device.currentValue("presence") == "present")){
+    if(location != device.currentValue("currentLocation")){
 		if(present)
-	   		sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "present", descriptionText: "$device.displayName has arrived")
+	   		sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "present", descriptionText: "$device.displayName has arrived at " + location)
 		else if(state.leftCounter > timeout)
-	    	sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "not present", descriptionText: "$device.displayName has left")
+        	if(location == "Away")
+	    		sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "not present", descriptionText: "$device.displayName has left " + device.currentValue("currentLocation"))
+            else
+                sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "not present", descriptionText: "$device.displayName has arrived at " + location)
+        setPresenceLocation(location);
         log.debug "Presence set"
 	}
 }
