@@ -38,6 +38,19 @@ mappings {
       POST: "updatePresence"
     ]
   }
+  path("/devices") {
+  	action: [
+    	GET: "listDevices"
+    ]
+  }
+}
+
+def listDevices() {
+	def resp = []
+    devices.each {
+      resp << [id: it.currentValue("deviceId")]
+    }
+    return resp
 }
 
 def updatePresence() {
