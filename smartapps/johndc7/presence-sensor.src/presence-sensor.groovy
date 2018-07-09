@@ -48,7 +48,7 @@ mappings {
 def listDevices() {
 	def resp = []
     devices.each {
-      resp << [id: it.currentValue("deviceId")]
+      resp << [id: it.currentValue("deviceId"), name: it.displayName]
     }
     return resp
 }
