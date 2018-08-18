@@ -96,7 +96,8 @@ def updateState(response, data){
 	        try {
             	def slurper = new JsonSlurper();
             	def json = slurper.parseText(response.data);
-                setPresence(json.present, json.location);
+                if(json.error) log.error('Error checking presence - ' + json.message);
+                else setPresence(json.present, json.location);
                 //setPresenceLocation(json.location);
                 log.debug "Recieved \"$response.data\" from server"
                 log.debug "Current Location: " + device.currentValue("currentLocation");
