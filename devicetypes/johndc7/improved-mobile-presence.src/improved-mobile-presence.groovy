@@ -21,7 +21,6 @@ metadata {
 		capability "Presence Sensor"
         capability "Sensor"
         
-        attribute "deviceId","String"
         attribute "currentLocation", "String"
         attribute "previousLocation", "String"
         
@@ -37,17 +36,6 @@ metadata {
         }
 		status "present":  "set-present"
         status "not present": "set-away"
-	}
-    
-    preferences {
-		section {
-			image(name: 'educationalcontent', multiple: true, images: [
-				"http://cdn.device-gse.smartthings.com/Arrival/Arrival1.jpg",
-				"http://cdn.device-gse.smartthings.com/Arrival/Arrival2.jpg"
-				])
-			input("id", "text", title: "Device ID", description: "Device ID from app", displayDuringSetup: true, required: true)
-            input("timeout", "number", title: "Presence timeout (minutes)", description: "Minutes until considered not present after leaving", defaultValue: 0, required: true)
-		}
 	}
 
 	tiles {
@@ -81,12 +69,10 @@ def updated() {
 	configure()
 }
 
-// handle commands
 def configure() {
-	sendEvent(name: "deviceId", value: id, isStateChange: true, displayed: false)
-	state.leftCounter = 0
-	runEvery1Minute(checkPresence)
-    checkPresence()
+	log.debug "Running config with settings: ${settings}"
+	runEvery15Minutes(checkPresence)
+    checkPresence();
 }
 
 def updateState(response, data){
@@ -111,24 +97,20 @@ def updateState(response, data){
 }
 def checkPresence(){
 	log.debug "Checking presence"
-	asynchttp_v1.get(updateState, [uri:"https://st.callahtech.com/detailedpresence?id=$id"])
+	asynchttp_v1.get(updateState, [uri:"https://st.callahtech.com/detailedpresence?id=${device.getDeviceNetworkId()}"])
 }
 
 def setPresence(boolean present, String location){
 	log.debug "setPresence(" + present + ")"
-    log.debug "leftCounter: " + state.leftCounter
-    if(present)
-    	state.leftCounter = 0
-	else
-    	state.leftCounter = state.leftCounter+1
     if(location != device.currentValue("currentLocation")){
 		if(present)
 	   		sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "present", descriptionText: "$device.displayName has arrived at " + location)
-		else if(state.leftCounter > timeout)
+		else {
         	if(location == "Away")
 	    		sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "not present", descriptionText: "$device.displayName has left " + device.currentValue("currentLocation"))
             else
                 sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "not present", descriptionText: "$device.displayName has arrived at " + location)
+        }
         setPresenceLocation(location);
         log.debug "Presence set"
 	}
