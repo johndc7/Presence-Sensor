@@ -13,8 +13,6 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
-include 'asynchttp_v1'
-import groovy.json.JsonSlurper
  
 metadata {
 	definition (name: "Improved Mobile Presence", namespace: "johndc7", author: "John Callahan") {
@@ -24,7 +22,7 @@ metadata {
         attribute "currentLocation", "String"
         attribute "previousLocation", "String"
         
-        command "checkPresence"
+        command "checkPresence", ["boolean"]
         command "setPresence",["boolean","string"]
 	}
 
@@ -50,6 +48,10 @@ metadata {
         main "location"
         details(["presence"])
     }
+    
+    preferences {
+    	input "timeout", "number", title: "Presence timeout", description: "Time before leaving a location is reported (minutes)"
+    }
 }
 
 // parse events into attributes
@@ -71,38 +73,55 @@ def updated() {
 
 def configure() {
 	log.debug "Running config with settings: ${settings}"
-	runEvery15Minutes(checkPresence)
-    checkPresence();
+	runEvery15Minutes(checkPresence);
+    checkPresence(false);
 }
 
-def updateState(response, data){
-	if (response.hasError()) {
-	        log.error "Response has error: $response.errorMessage"
-	    } else {
-	        try {
-            	def slurper = new JsonSlurper();
-            	def json = slurper.parseText(response.data);
-                if(json.error) log.error('Error checking presence - ' + json.message);
-                else setPresence(json.present, json.location);
-                //setPresenceLocation(json.location);
-                log.debug "Recieved \"$response.data\" from server"
-                log.debug "Current Location: " + device.currentValue("currentLocation");
-                log.debug "Previous Location: " + device.currentValue("previousLocation");
-                //log.debug "Location: " + response.data.location.getClass()
-	        } catch (e) {
-	            log.error "Error setting presence: $e"
-                setPresence(false, "Away");
-	        }
-    	}
-}
 def checkPresence(){
+	checkPresence(false);
+}
+
+// Used after timeout is complete
+def forceUpdate(){
+	checkPresence(true);
+}
+
+def checkPresence(boolean force){
 	log.debug "Checking presence"
-	asynchttp_v1.get(updateState, [uri:"https://st.callahtech.com/detailedpresence?id=${device.getDeviceNetworkId()}"])
+    def params = [
+    	uri: "https://st.callahtech.com/detailedpresence?id=${device.getDeviceNetworkId()}"
+	]
+	try {
+	    httpGet(params) { resp ->
+            log.debug "Recieved ${resp.data} from server"
+            log.debug "Current Location: " + device.currentValue("currentLocation");
+            log.debug "Previous Location: " + device.currentValue("previousLocation");
+	    	log.debug "response data: ${resp.data}"
+            if(resp.data.error) log.error('Error checking presence - ' + resp.data.message);
+            else setPresence(resp.data.present, resp.data.location, force);
+	    }
+	} catch (e) {
+	    log.error "Error setting presence: $e"
+		setPresence(false, "Away", force);
+	}
 }
 
 def setPresence(boolean present, String location){
+	setPresence(present, location, false);
+}
+
+def setPresence(boolean present, String location, boolean force){
 	log.debug "setPresence(" + present + ")"
-    if(location != device.currentValue("currentLocation")){
+    if(location != device.currentValue("currentLocation") || (present ? "present":"not present") != device.currentValue("presence")){
+    	if(timeout && timeout > 0 && location == "Away" && !force){
+        	log.debug("Delaying update by ${timeout} minute(s)");
+            // Schedule update for time defined in timeout
+        	runIn(timeout * 60, forceUpdate);
+            return;
+        } else if(timeout && timeout > 0){
+        	// Ensure there are no pending events if a timeout is set
+            unschedule();
+        }
 		if(present)
 	   		sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "present", descriptionText: "$device.displayName has arrived at " + location)
 		else {
