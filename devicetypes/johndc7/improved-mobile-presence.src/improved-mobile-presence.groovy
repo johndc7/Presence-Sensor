@@ -18,22 +18,15 @@ metadata {
 	definition (name: "Improved Mobile Presence", namespace: "johndc7", author: "John Callahan") {
 		capability "Presence Sensor"
         capability "Sensor"
+        capability "Battery"
+        capability "Power Source"
         
         attribute "currentLocation", "String"
         attribute "previousLocation", "String"
         
         command "checkPresence", ["boolean"]
         command "setPresence",["boolean","string"]
-	}
-
-
-	simulator {
-    	standardTile("presence", "device.presence", width: 2, height: 2, canChangeBackground: true) {
-            state "present", labelIcon:"st.presence.tile.present", backgroundColor:"#00a0dc"
-            state "not present", labelIcon:"st.presence.tile.not-present", backgroundColor:"#ffffff"
-        }
-		status "present":  "set-present"
-        status "not present": "set-away"
+        command "setBattery",["number","boolean"]
 	}
 
 	tiles {
@@ -45,8 +38,16 @@ metadata {
         	state "Home", label: '${currentValue}', backgroundColor:"#00a0dc"
             state "default", label: '${currentValue}', backgroundColor:"#ffffff"
 		}
+        valueTile("battery", "device.battery", width: 1, height: 1){
+        	state "default", label: '${currentValue}%'
+        }
+        valueTile("charging", "device.powerSource", width: 1, height: 1){
+        	state "battery", label: 'Not Charging'
+            state "dc", label: 'Charging', backgroundColor:"#00a0dc"
+            state "default", label: '${currentValue}'
+        }
         main "location"
-        details(["presence"])
+        details(["presence", "battery", "charging"])
     }
     
     preferences {
@@ -57,10 +58,6 @@ metadata {
 // parse events into attributes
 def parse(String description) {
 	log.debug "Parsing '${description}'"
-	if(description == "set-present")
-    	setPresence(true);
-	if(description == "set-away")
-    	setPresence(false);
 }
 
 def installed() {
@@ -98,12 +95,22 @@ def checkPresence(boolean force){
             log.debug "Previous Location: " + device.currentValue("previousLocation");
 	    	log.debug "response data: ${resp.data}"
             if(resp.data.error) log.error('Error checking presence - ' + resp.data.message);
-            else setPresence(resp.data.present, resp.data.location, force);
+            else {
+            	setPresence(resp.data.present, resp.data.location, force);
+                if(resp.data.battery && resp.data.charging != null)
+                	setBattery(resp.data.battery, resp.data.charging);
+            }
 	    }
 	} catch (e) {
-	    log.error "Error setting presence: $e"
-		setPresence(false, "Away", force);
+	    log.error "Error getting presence: $e"
 	}
+}
+
+def setBattery(int percent, boolean charging){
+	if(percent != device.currentValue("battery"))
+		sendEvent(name: "battery", value: percent, isStateChange: true, displayed: false);
+    if(charging != device.currentValue("charging"))
+		sendEvent(name: "powerSource", value: (charging ? "dc":"battery"), isStateChange: true, displayed: false);
 }
 
 def setPresence(boolean present, String location){
