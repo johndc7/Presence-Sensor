@@ -169,6 +169,8 @@ def updatePresence() {
     for(int i = 0; i < getChildDevices().size(); i++)
     	if(getChildDevices().get(i).getDeviceNetworkId() == body.id){
         	getChildDevices().get(i).setPresence(body.present,body.location);
+            if(body.battery && body.charging != null)
+            	getChildDevices().get(i).setBattery(body.battery,body.charging);
             log.debug("Updating: ${body.id}");
             return [error:false,type:"Device updated",message:"Sucessfully updated device: ${body.id}"];
         }
