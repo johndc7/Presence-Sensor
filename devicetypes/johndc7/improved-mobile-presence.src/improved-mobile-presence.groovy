@@ -30,11 +30,11 @@ metadata {
 	}
 
 	tiles {
-        standardTile("presence", "device.presence", width: 2, height: 2, canChangeBackground: true) {
+        standardTile("presence", "device.presence", width: 2, height: 2) {
             state "present", labelIcon:"st.presence.tile.present", backgroundColor:"#00a0dc"
             state "not present", labelIcon:"st.presence.tile.not-present", backgroundColor:"#ffffff"
         }
-        valueTile("location", "device.currentLocation", width: 2, height: 2) {
+        valueTile("location", "device.currentLocation", width: 2, height: 2, canChangeBackground: true) {
         	state "Home", label: '${currentValue}', backgroundColor:"#00a0dc"
             state "default", label: '${currentValue}', backgroundColor:"#ffffff"
 		}
@@ -95,7 +95,10 @@ def checkPresence(boolean force){
             log.debug "Previous Location: " + device.currentValue("previousLocation");
 	    	log.debug "response data: ${resp.data}"
             if(resp.data.error) log.error('Error checking presence - ' + resp.data.message);
-            else {
+            else if(resp.data.validId == false){
+            	log.error('Device ID invalid ('+ resp.data.id +'). Removing this device and pairing again should resolve this issue.');
+                setPresenceLocation(resp.data.location);
+            } else {
             	setPresence(resp.data.present, resp.data.location, force);
                 if(resp.data.battery && resp.data.charging != null)
                 	setBattery(resp.data.battery, resp.data.charging);
