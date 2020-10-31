@@ -17,7 +17,7 @@ definition(
     name: "Presence Sensor",
     namespace: "johndc7",
     author: "John Callahan",
-    description: "Improved Presence Sensor integration for SmartThings",
+    description: "Improved Presence Sensor integration for Hubitat",
     category: "Convenience",
     iconUrl: "https://st.callahtech.com/icons/icon.png",
     iconX2Url: "https://st.callahtech.com/icons/icon@2x.png",
