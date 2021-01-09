@@ -16,7 +16,7 @@
  
 metadata {
 	definition (name: "Improved Mobile Presence", namespace: "johndc7", author: "John Callahan") {
-		capability "Presence Sensor"
+	capability "Presence Sensor"
         capability "Sensor"
         capability "Battery"
         capability "Power Source"
@@ -52,12 +52,18 @@ metadata {
     
     preferences {
     	input "timeout", "number", title: "Presence timeout", description: "Time before leaving a location is reported (minutes)"
+        input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
     }
 }
 
 // parse events into attributes
 def parse(String description) {
-	log.debug "Parsing '${description}'"
+	if (logEnable) log.debug "Parsing '${description}'"
+}
+
+def logsOff() {
+    log.warn "debug logging disabled..."
+    device.updateSetting("logEnable", [value: "false", type: "bool"])
 }
 
 def installed() {
@@ -69,7 +75,7 @@ def updated() {
 }
 
 def configure() {
-	log.debug "Running config with settings: ${settings}"
+	if (logEnable) log.debug "Running config with settings: ${settings}"
 	runEvery15Minutes(checkPresence);
     checkPresence(false);
 }
@@ -84,16 +90,16 @@ def forceUpdate(){
 }
 
 def checkPresence(boolean force){
-	log.debug "Checking presence"
+	if (logEnable) log.debug "Checking presence"
     def params = [
     	uri: "https://st.callahtech.com/detailedpresence?id=${device.getDeviceNetworkId()}"
 	]
 	try {
 	    httpGet(params) { resp ->
-            log.debug "Recieved ${resp.data} from server"
-            log.debug "Current Location: " + device.currentValue("currentLocation");
-            log.debug "Previous Location: " + device.currentValue("previousLocation");
-	    	log.debug "response data: ${resp.data}"
+            if (logEnable) log.debug "Recieved ${resp.data} from server"
+            if (logEnable) log.debug "Current Location: " + device.currentValue("currentLocation");
+            if (logEnable) log.debug "Previous Location: " + device.currentValue("previousLocation");
+	    	if (logEnable) log.debug "response data: ${resp.data}"
             if(resp.data.error) log.error('Error checking presence - ' + resp.data.message);
             else if(resp.data.validId == false){
             	log.error('Device ID invalid ('+ resp.data.id +'). Removing this device and pairing again should resolve this issue.');
@@ -121,10 +127,10 @@ def setPresence(boolean present, String location){
 }
 
 def setPresence(boolean present, String location, boolean force){
-	log.debug "setPresence(" + present + ")"
+	 if (logEnable) log.debug  "setPresence(" + present + ")"
     if(location != device.currentValue("currentLocation") || (present ? "present":"not present") != device.currentValue("presence")){
     	if(timeout && timeout > 0 && location == "Away" && !force){
-        	log.debug("Delaying update by ${timeout} minute(s)");
+        	if (logEnable) log.debug("Delaying update by ${timeout} minute(s)");
             // Schedule update for time defined in timeout
         	runIn(timeout * 60, forceUpdate);
             return;
@@ -141,16 +147,16 @@ def setPresence(boolean present, String location, boolean force){
                 sendEvent(displayed: true,  isStateChange: true, name: "presence", value: "not present", descriptionText: "$device.displayName has arrived at " + location)
         }
         setPresenceLocation(location);
-        log.debug "Presence set"
+        if (logEnable) log.debug "Presence set"
 	}
 }
 
 def setPresenceLocation(String location){
 	if(location != device.currentValue("currentLocation")){
-		log.debug "Setting location to: " + location
+	    log.info "Setting location to: " + location
 		sendEvent(name: "previousLocation", value: device.currentValue("currentLocation"), isStateChange: true, displayed: false)
 		sendEvent(name: "currentLocation", value: location, isStateChange: true, displayed: false)
-		log.debug "Current location: " + device.currentValue("currentLoaction")
-		log.debug "Previous location: " + device.currentValue("previousLocation")
+		if (logEnable) log.debug "Current location: " + device.currentValue("currentLoaction")
+		if (logEnable) log.debug "Previous location: " + device.currentValue("previousLocation")
     }
 }
