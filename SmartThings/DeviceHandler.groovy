@@ -16,7 +16,7 @@
  
 metadata {
 	definition (name: "Improved Mobile Presence", namespace: "johndc7", author: "John Callahan") {
-		capability "Presence Sensor"
+	capability "Presence Sensor"
         capability "Sensor"
         capability "Battery"
         capability "Power Source"
