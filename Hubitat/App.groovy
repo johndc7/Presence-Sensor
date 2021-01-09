@@ -39,6 +39,9 @@ preferences {
         page: "repairPage",
         description: "Pair an existing device (For Presence Sensor app reinstalls, etc.)")
     }
+         section("") {
+       input "logEnable", "bool", title: "Enable Debug Logging", required: false, multiple: false, defaultValue: false, submitOnChange: true
+    }
     //section("Other settings") {
       //input "notify", "bool", title: "Notifications"
     //}
@@ -127,7 +130,7 @@ def setToken(){
                 name: location.getName()
             ]
         ]) { resp ->
-        	//log.debug(resp.data);
+        	if(logEnable) log.debug(resp.data);
         	return resp.data;	    	
     	}
 	} catch (e) {
@@ -141,7 +144,7 @@ def getDeviceId(){
         	uri: "https://st.callahtech.com",
     		path: "/newid"
         ]) { resp ->
-        	log.debug(resp.data);
+        	if(logEnable) log.debug(resp.data);
         	return resp.data;	    	
     	}
 	} catch (e) {
@@ -159,8 +162,8 @@ def listDevices() {
 
 def updatePresence() {
     def body = request.JSON;
-    log.debug("Received push from server");
-    log.debug(body);
+   if(logEnable) log.debug("Received push from server");
+    if(logEnable) log.debug(body);
     if(body == null || body.toString() == "{}"){
     	getChildDevices().checkPresence();
         log.error("No JSON data received. Requesting update of ${getChildDevices().size()} device(s) at location.");
@@ -171,34 +174,35 @@ def updatePresence() {
         	getChildDevices().get(i).setPresence(body.present,body.location);
             if(body.battery && body.charging != null)
             	getChildDevices().get(i).setBattery(body.battery,body.charging);
-            log.debug("Updating: ${body.id}");
+           if(logEnable) log.debug("Updating: ${body.id}");
             return [error:false,type:"Device updated",message:"Sucessfully updated device: ${body.id}"];
         }
-    log.debug("Creating new device ${body.name} with an id of: ${body.id}");
+    if(logEnable) log.debug("Creating new device ${body.name} with an id of: ${body.id}");
     addChildDevice("johndc7", "Improved Mobile Presence", body.id, [name: body.name ? body.name : "Presence Sensor"]);
     return [error:false, type:"Device created", message:"Created new device ${body.name} with an id of: ${body.id}"];
     //return [error:true,type:"Invalid ID",message:"No device with an id of ${body.id} could be found. Requesting update of ${getChildDevices().size()} device(s) at location."];
 }
 
 def installed() {
-	log.debug "Installed with settings: ${settings}"
+	if(logEnable) log.debug "Installed with settings: ${settings}"
 	initialize()
 }
 
 def updated() {
-	log.debug "Updated with settings: ${settings}"
+	if(logEnable) log.debug "Updated with settings: ${settings}"
 	unsubscribe()
 	initialize()
 }
 
 def initialize() {
 	setToken();
-	log.debug("Subscribing to events");
+	if(logEnable) log.debug("Subscribing to events");
     subscribe(getChildDevices(), "presence", presenceNotifier);
 }
 
 def presenceNotifier(evt) {
-	log.debug "Event: " + evt.descriptionText;
+	if(logEnable) log.debug "Event: " + evt.descriptionText;
     //if(notify)
     	//sendNotification(evt.descriptionText)
 }
+
