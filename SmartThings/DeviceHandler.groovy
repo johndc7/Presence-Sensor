@@ -24,6 +24,7 @@ metadata {
         attribute "currentLocation", "String"
         attribute "previousLocation", "String"
         
+        command "temporaryPresent"
         command "checkPresence", ["boolean"]
         command "setPresence",["boolean","string"]
         command "setBattery",["number","boolean"]
@@ -51,7 +52,8 @@ metadata {
     }
     
     preferences {
-    	input "timeout", "number", title: "Presence timeout", description: "Time before leaving a location is reported (minutes)"
+    	input "timeout", "number", title: "Presence timeout", defaultValue: 0, description: "Time before leaving a location is reported (minutes)"
+        input "lockTimeout", "number", title: "Lock timeout", defaultValue: 5, description: "Time assumed present after an assigned lock code is used (minutes)"
         input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true
     }
 }
@@ -159,4 +161,21 @@ def setPresenceLocation(String location){
 		if (logEnable) log.debug "Current location: " + device.currentValue("currentLoaction")
 		if (logEnable) log.debug "Previous location: " + device.currentValue("previousLocation")
     }
+}
+
+def temporaryPresent(){
+    if(lockTimeout == null){
+        if (logEnable) log.debug "lockTimeout not set. Setting to 5 minutes."
+        device.updateSetting("lockTimeout", [value: "5", type: "number"])
+    }
+    
+    if (logEnable) log.debug "Setting device to present for $lockTimeout minutes. After time expires presence will be checked."
+    setPresence(true, "Home", true)
+    sendEvent(name: "skipSync", value: true, isStateChange: false, displayed: false)
+    runIn(lockTimeout * 60, endTemporaryPresent)
+}
+
+def endTemporaryPresent(){
+    sendEvent(name: "skipSync", value: false, isStateChange: false, displayed: false)
+    forceUpdate()
 }
