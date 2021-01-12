@@ -13,6 +13,8 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  */
+import groovy.json.JsonSlurper;
+
 definition(
     name: "Presence Sensor",
     namespace: "johndc7",
@@ -39,15 +41,25 @@ preferences {
         page: "repairPage",
         description: "Pair an existing device (For Presence Sensor app reinstalls, etc.)")
     }
-         section("") {
+      
+    section("Assign lock codes") {
+      href(name: "lockCodesHref",
+        title: "Lock Codes",
+        page: "lockPage",
+        description: "Assign a lock code to a device. When that code is used, device will be assumed present for a few minutes.")
+    }
+      
+    section("") {
        input "logEnable", "bool", title: "Enable Debug Logging", required: false, multiple: false, defaultValue: false, submitOnChange: true
     }
     //section("Other settings") {
       //input "notify", "bool", title: "Notifications"
     //}
+    footer()
   }
   page(name: "createPage")
   page(name: "repairPage")
+  page(name: "lockPage")
 }
 
 def createPage() {
@@ -98,6 +110,36 @@ def repairPage() {
     }
     }
   }
+}
+
+def lockPage() {
+    dynamicPage(name: "lockPage", install: true) {
+    section("Locks"){
+      paragraph "Select what lock to listen for events on. This option is used for all devices."
+      input "locks", "capability.lockCodes", multiple: true, required: false, submitOnChange: true
+    }
+    section("Device") {
+      def codeNames = []
+      if(locks != null)
+        for(lock in locks){
+          def slurper = new JsonSlurper()
+          def lockCodes = slurper.parseText(lock.currentValue('lockCodes'))
+          for(code in lockCodes.keySet())
+            codeNames.push("(${lock.getId()})${lock.getName()}: ${lockCodes[code].name}")
+        }
+      paragraph "Choose a device and select the codes you would like to assign. When any of a device's assigned codes are used, the device will be assumed present for a few minutes. The amount of time can be set in the device preferences."
+      input "lockPresenceDevice", "capability.presenceSensor", multiple: false, required: false, submitOnChange: true
+      
+      if(lockPresenceDevice != null) input "codes-${lockPresenceDevice.getDeviceNetworkId()}", "enum", multiple: true, required: false, submitOnChange: true, options: codeNames, description: "Select lock codes"
+    }
+  }
+}
+
+def footer() {
+    section(){
+        paragraph "<hr style='background-color:rgba(54,54,54,.87); height: 1px; border: 0;'>"
+        paragraph "<div style='text-align:center;color:rgba(54,54,54,.87)'><a href='https://play.google.com/store/apps/details?id=com.callahtech.presencesensor&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1' target='_blank'><img style='max-width: 150px' alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png'/></a><br>If you are on Android 8.1 or later, the patch app is also needed: <a href=\"https://presence.callahtech.com/latest-patch.apk\" target='_blank'>Download</a><br><br>Lots of time has been spent creating and maintaining this app.<br>If you find it useful, please consider donating.<br><a href='https://paypal.me/johndc7' target='_blank'><img src='https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg' border='0' alt='PayPal Logo'></a></div>"
+    }
 }
 
 mappings {
@@ -162,7 +204,7 @@ def listDevices() {
 
 def updatePresence() {
     def body = request.JSON;
-   if(logEnable) log.debug("Received push from server");
+    if(logEnable) log.debug("Received push from server");
     if(logEnable) log.debug(body);
     if(body == null || body.toString() == "{}"){
     	getChildDevices().checkPresence();
@@ -174,7 +216,7 @@ def updatePresence() {
         	getChildDevices().get(i).setPresence(body.present,body.location);
             if(body.battery && body.charging != null)
             	getChildDevices().get(i).setBattery(body.battery,body.charging);
-           if(logEnable) log.debug("Updating: ${body.id}");
+            if(logEnable) log.debug("Updating: ${body.id}");
             return [error:false,type:"Device updated",message:"Sucessfully updated device: ${body.id}"];
         }
     if(logEnable) log.debug("Creating new device ${body.name} with an id of: ${body.id}");
@@ -189,7 +231,7 @@ def installed() {
 }
 
 def updated() {
-	if(logEnable) log.debug "Updated with settings: ${settings}"
+  if(logEnable) log.debug "Updated with settings: ${settings}"
 	unsubscribe()
 	initialize()
 }
@@ -197,7 +239,21 @@ def updated() {
 def initialize() {
 	setToken();
 	if(logEnable) log.debug("Subscribing to events");
-    subscribe(getChildDevices(), "presence", presenceNotifier);
+  subscribe(getChildDevices(), "presence", presenceNotifier);
+  subscribe(settings.locks, "lastCodeName", lockHandler)
+}
+              
+def lockHandler(evt){
+  if(logEnable) log.debug("${evt.getDevice()} unlocked with code '${evt.value}'")
+  if(logEnable) log.debug "(${evt.getDeviceId()})${evt.getDevice()}: ${evt.value}"
+  for(key in settings.keySet())
+    if(key.startsWith('codes-') && settings."$key".find({i -> i == "(${evt.getDeviceId()})${evt.getDevice()}: ${evt.value}"}) != null){
+      def child = getChildDevice(key.split('-')[1])
+      if(child){
+        if(logEnable) log.debug "${child.getName()} temporary present"
+        child.temporaryPresent()
+      }
+    }
 }
 
 def presenceNotifier(evt) {
@@ -205,4 +261,3 @@ def presenceNotifier(evt) {
     //if(notify)
     	//sendNotification(evt.descriptionText)
 }
-
