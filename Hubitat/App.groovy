@@ -125,7 +125,8 @@ def lockPage() {
           def slurper = new JsonSlurper()
           def lockCodes = slurper.parseText(lock.currentValue('lockCodes'))
           for(code in lockCodes.keySet())
-            codeNames.push("(${lock.getId()})${lock.getName()}: ${lockCodes[code].name}")
+            if(lock.getLabel() != null)
+                codeNames.push("(${lock.getId()})${lock.getLabel()}: ${lockCodes[code].name}")
         }
       paragraph "Choose a device and select the codes you would like to assign. When any of a device's assigned codes are used, the device will be assumed present for a few minutes. The amount of time can be set in the device preferences."
       input "lockPresenceDevice", "capability.presenceSensor", multiple: false, required: false, submitOnChange: true
