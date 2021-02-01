@@ -4,4 +4,10 @@ This project is a mobile presence system with additional features and improved s
 
 Each platform has slightly different setup instructions.
 
-SmartThings: https://community.smartthings.com/t/release-improved-mobile-presence-android-only
+---
+
+## SmartThings
+https://community.smartthings.com/t/release-improved-mobile-presence-android-only
+
+## Hubitat
+https://community.hubitat.com/t/release-improved-mobile-presence-android-only
