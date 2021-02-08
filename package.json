@@ -1,0 +1,28 @@
+{
+  "packageName": "Presence Sensor",
+  "author": "johndc7",
+  "version": "1.1",
+  "minimumHEVersion": "0.0",
+  "communityLink": "https://community.hubitat.com/t/release-improved-mobile-presence-android-only",
+  "dateReleased": "2020-12-07",
+  "apps": [
+    {
+      "id": "8f2b3514-5d7c-4607-89ab-ba9c6c2a8291",
+      "name": "Presence Sensor",
+      "namespace": "johndc7",
+      "location": "https://raw.githubusercontent.com/johndc7/Presence-Sensor/master/Hubitat/App.groovy",
+      "required": true,
+      "oauth": true,
+      "primary": false
+    }
+  ],
+  "drivers": [
+    {
+      "id": "8aa421e7-4019-4e77-9d07-778a7dca4cdd",
+      "name": "Improved Mobile Presence",
+      "namespace": "johndc7",
+      "location": "https://raw.githubusercontent.com/johndc7/Presence-Sensor/master/SmartThings/DeviceHandler.groovy",
+      "required": true
+    }
+  ]
+}
