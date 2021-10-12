@@ -48,13 +48,10 @@ preferences {
         page: "lockPage",
         description: "Assign a lock code to a device. When that code is used, device will be assumed present for a few minutes.")
     }
-      
-    section("") {
-       input "logEnable", "bool", title: "Enable Debug Logging", required: false, multiple: false, defaultValue: false, submitOnChange: true
+    section("Debug / Notifications") {
+      input "notificationDevices", "capability.notification", title: "Notification Devices", multiple: true, submitOnChange: true
+      input "logEnable", "bool", title: "Enable Debug Logging", required: false, multiple: false, defaultValue: false, submitOnChange: true
     }
-    //section("Other settings") {
-      //input "notify", "bool", title: "Notifications"
-    //}
     footer()
   }
   page(name: "createPage")
@@ -238,8 +235,8 @@ def updated() {
 }
 
 def initialize() {
-	setToken();
-	if(logEnable) log.debug("Subscribing to events");
+  setToken();
+  if(logEnable) log.debug("Subscribing to events");
   subscribe(getChildDevices(), "presence", presenceNotifier);
   subscribe(settings.locks, "lastCodeName", lockHandler)
 }
@@ -259,6 +256,6 @@ def lockHandler(evt){
 
 def presenceNotifier(evt) {
 	if(logEnable) log.debug "Event: " + evt.descriptionText;
-    //if(notify)
-    	//sendNotification(evt.descriptionText)
+    if(notificationDevices)
+    	notificationDevices.deviceNotification(evt.descriptionText)
 }
